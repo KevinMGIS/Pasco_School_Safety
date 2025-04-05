@@ -140,15 +140,21 @@ for t_seconds in thresholds_seconds:
 # 6. Export Isochrone Polygons as GeoJSON
 # -------------------------------
 
-# Convert the isochrone polygons into a GeoDataFrame for export.
+# Convert the isochrone polygons dictionary into a GeoDataFrame for export
 isochrone_gdf = gpd.GeoDataFrame(columns=['travel_time', 'geometry'], crs=graph_crs)
 
 for t_seconds, poly in isochrones.items():
     if poly is not None:
-        # Append each isochrone with its corresponding travel time (in seconds) using _append (since append is deprecated).
+        # Append each isochrone with its corresponding travel time (in seconds)
         isochrone_gdf = isochrone_gdf._append({'travel_time': t_seconds, 'geometry': poly}, ignore_index=True)
 
-# Specify the output file path for the isochrone GeoJSON.
+if isochrone_gdf.crs is None:
+    isochrone_gdf.set_crs(graph_crs, inplace=True)
+
+# Reproject the isochrone GeoDataFrame to WGS84 (EPSG:4326) for use in Leaflet
+isochrone_gdf = isochrone_gdf.to_crs(epsg=4326)
+
+# Specify the output file path for the isochrone GeoJSON
 isochrone_output_fp = "data/isochrones.geojson"
 isochrone_gdf.to_file(isochrone_output_fp, driver="GeoJSON")
 print("Isochrone polygons exported to", isochrone_output_fp)
