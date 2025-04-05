@@ -8,8 +8,8 @@ assumed driving speed. The results are exported as a GeoJSON file for use in Web
 applications and dashboards.
 This project is intended solely as a coding exercise.
 
-Author: Your Name
-Date: YYYY-MM-DD
+Author: Kevin M
+Date: March, 2025
 """
 
 import osmnx as ox

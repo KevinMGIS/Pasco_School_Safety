@@ -90,7 +90,8 @@
     var schoolsData = null;
     loadGeoJSON('data/Pasco_Schools.geojson', {
       onEachFeature: function(feature, layer) {
-        layer.bindPopup('<strong>School:</strong> ' + feature.properties.name);
+        var schoolName = feature.properties.name || feature.properties.NAME || "Unknown School";
+        layer.bindPopup('<strong>School:</strong> ' + schoolName);
       },
       pointToLayer: function(feature, latlng) {
         return L.circleMarker(latlng, {
@@ -107,9 +108,9 @@
       var select = document.getElementById('schoolSelect');
       data.features.forEach(function(feature) {
         var opt = document.createElement('option');
-        // Assumes 'name' is the school identifier in the schools file.
-        opt.value = feature.properties.name;
-        opt.innerHTML = feature.properties.name;
+        var schoolName = feature.properties.name || feature.properties.NAME || "Unknown School";
+        opt.value = schoolName;
+        opt.innerHTML = schoolName;
         select.appendChild(opt);
       });
     });
@@ -117,7 +118,8 @@
     // Load Police Stations (in blue)
     loadGeoJSON('data/Pasco_Police_Stations.geojson', {
       onEachFeature: function(feature, layer) {
-        layer.bindPopup('<strong>Police Station:</strong> ' + (feature.properties.name || 'Unknown'));
+        var policeName = feature.properties.name || feature.properties.NAME || "Unknown Police Station";
+        layer.bindPopup('<strong>Police Station:</strong> ' + policeName);
       },
       pointToLayer: function(feature, latlng) {
         return L.circleMarker(latlng, {
@@ -134,7 +136,8 @@
     // Load Fire Stations (in red)
     loadGeoJSON('data/Pasco_Fire_Stations.geojson', {
       onEachFeature: function(feature, layer) {
-        layer.bindPopup('<strong>Fire Station:</strong> ' + (feature.properties.name || 'Unknown'));
+        var fireName = feature.properties.name || feature.properties.NAME || "Unknown Fire Station";
+        layer.bindPopup('<strong>Fire Station:</strong> ' + fireName);
       },
       pointToLayer: function(feature, latlng) {
         return L.circleMarker(latlng, {

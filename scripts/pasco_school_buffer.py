@@ -7,8 +7,8 @@ then performs spatial analysis to count the number of police and fire stations w
 The resulting data is exported as a GeoJSON file for use in a WebGIS application and dashboards.
 This project is intended solely as a coding exercise.
 
-Author: Your Name
-Date: YYYY-MM-DD
+Author: Kevin M
+Date: March, 2025
 """
 
 import geopandas as gpd
