@@ -100,6 +100,40 @@
         })
         .catch(err => console.error('Error loading ' + layerName + ' GeoJSON:', err));
     }
+    // Load Euclidean Buffers (back on the map)
+    var buffersLayer = L.layerGroup();
+    // Note: Adjust the file path as necessary; here we use the correct case "Data"
+    var bufferFiles = [
+      {file: 'data/All_School_Buffers_Analyzed_4326.geojson', name: "Buffers for All Schools"}
+    ];
+    bufferFiles.forEach(function(item) {
+      // Fetch the GeoJSON directly to avoid adding duplicates in the legend
+      fetch(item.file)
+        .then(response => response.json())
+        .then(data => {
+          var geojsonLayer = L.geoJSON(data, {
+            style: function(feature) {
+              return {
+                fillColor: 'green',
+                color: 'darkgreen',
+                weight: 2,
+                opacity: 0.8,
+                fillOpacity: 0.4
+              };
+            },
+            onEachFeature: function(feature, layer) {
+              layer.bindPopup('<strong>Buffer for:</strong> ' + feature.properties.school_name + '<br/><strong>Distance:</strong> ' + item.name);
+            }
+          });
+          buffersLayer.addLayer(geojsonLayer);
+        })
+        .catch(err => console.error('Error loading ' + item.name + ' GeoJSON:', err));
+    });
+    // Add the buffers layer group to the map and layer control after a short delay
+    setTimeout(function() {
+      map.addLayer(buffersLayer);
+      layerControl.addOverlay(buffersLayer, "School Buffers");
+    }, 2000);
 
     // Load Schools layer and populate the school filter dropdown
     var schoolsData = null;
@@ -166,36 +200,6 @@
       }
     }, "Fire Stations");
 
-    // Load Euclidean Buffers (back on the map)
-    var buffersLayer = L.layerGroup();
-    var bufferFiles = [
-      {file: 'data/Schools_buffer_0.5_Mile.geojson', name: "Buffer 0.5 Mile"},
-      {file: 'data/Schools_Buffer_1_Mile.geojson', name: "Buffer 1 Mile"},
-      {file: 'data/Schools_Buffer_1.5_Mile.geojson', name: "Buffer 1.5 Mile"}
-    ];
-    bufferFiles.forEach(function(item) {
-      loadGeoJSON(item.file, {
-        style: function(feature) {
-          return {
-            fillColor: 'green',
-            color: 'darkgreen',
-            weight: 2,
-            opacity: 0.8,
-            fillOpacity: 0.4
-          };
-        },
-        onEachFeature: function(feature, layer) {
-          layer.bindPopup('<strong>Buffer for:</strong> ' + feature.properties.school_name + '<br/><strong>Distance:</strong> ' + item.name);
-        }
-      }, item.name, function(loadedLayer, data) {
-        buffersLayer.addLayer(loadedLayer);
-      });
-    });
-    // Add the buffers layer group to the map and layer control after a short delay
-    setTimeout(function() {
-      map.addLayer(buffersLayer);
-      layerControl.addOverlay(buffersLayer, "Euclidean Buffers");
-    }, 2000);
 
     // Update school selection event (if needed)
     document.getElementById('schoolSelect').addEventListener('change', function() {
