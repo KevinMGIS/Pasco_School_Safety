@@ -6,61 +6,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Link to Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Optional: Link to any custom CSS styles -->
   <style>
-    /* Ensure the map fills the full viewport height */
-    #map { height: 100vh; }
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    /* Sidebar styling */
+    #sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 300px;
+      bottom: 0;
+      background: #f7f7f7;
+      padding: 10px;
+      overflow-y: auto;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+    }
+    /* Map takes the remaining space */
+    #map { position: absolute; top: 0; left: 300px; right: 0; bottom: 0; }
   </style>
 </head>
 <body>
-  <!-- The map container -->
+  <!-- Sidebar for dashboard controls -->
+  <div id="sidebar">
+    <h2>Dashboard</h2>
+    <label for="schoolSelect">Select School:</label>
+    <select id="schoolSelect">
+      <option value="">All Schools</option>
+      <!-- Options will be populated dynamically from the Schools layer -->
+    </select>
+    <!-- Additional dashboard elements can go here -->
+  </div>
+
+  <!-- Map container -->
   <div id="map"></div>
 
   <!-- Include Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialize the map, centering it on Pasco County (approximate coordinates)
+    // Initialize the map centered on Pasco County (approximate coordinates)
     var map = L.map('map').setView([28.2465, -82.6925], 11);
-
-    // Add an OpenStreetMap basemap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Create an object to hold overlay layers for later use in a layer control
+    // Object to hold overlay layers for the layer control
     var overlayMaps = {};
+    var layerControl = L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
 
-    // -------------------------------
-    // Load GeoJSON Layers
-    // -------------------------------
-
-    // Function to load a GeoJSON layer and add pop-ups
-    function loadGeoJSON(url, options, layerName) {
+    // Helper function to load a GeoJSON layer and execute a callback after loading
+    function loadGeoJSON(url, options, layerName, callback) {
       fetch(url)
         .then(response => response.json())
         .then(data => {
-          // Create a Leaflet GeoJSON layer
           var geojsonLayer = L.geoJSON(data, options);
-          // Optionally add the layer to the map immediately
-          // geojsonLayer.addTo(map);
-          // Store the layer in overlayMaps for toggling later
           overlayMaps[layerName] = geojsonLayer;
-          // Update the layer control if already added (or add it if not)
-          if (layerControl) {
-            layerControl.addOverlay(geojsonLayer, layerName);
-          }
+          layerControl.addOverlay(geojsonLayer, layerName);
+          if (callback) callback(geojsonLayer, data);
         })
         .catch(err => console.error('Error loading ' + layerName + ' GeoJSON:', err));
     }
 
-    // Create a layer control (empty for now) and add it to the map
-    var layerControl = L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
-
-    // Options for displaying schools (as circle markers with pop-ups)
-    var schoolsOptions = {
+    // Load Schools layer and populate the school filter dropdown
+    var schoolsData = null;
+    loadGeoJSON('data/Pasco_Schools.geojson', {
       onEachFeature: function(feature, layer) {
-        // Customize pop-up content with school information
         layer.bindPopup('<strong>School:</strong> ' + feature.properties.name);
       },
       pointToLayer: function(feature, latlng) {
@@ -73,53 +82,120 @@
           fillOpacity: 0.8
         });
       }
-    };
+    }, "Schools", function(layer, data) {
+      schoolsData = data;
+      var select = document.getElementById('schoolSelect');
+      data.features.forEach(function(feature) {
+        var opt = document.createElement('option');
+        opt.value = feature.properties.name; // Assumes 'name' is the school identifier
+        opt.innerHTML = feature.properties.name;
+        select.appendChild(opt);
+      });
+    });
 
-    // Load the schools GeoJSON layer
-    loadGeoJSON('data/Pasco_Schools.geojson', schoolsOptions, "Schools");
-
-    // Options for displaying police stations (using default markers)
-    var policeOptions = {
+    // Load Police Stations
+    loadGeoJSON('data/Pasco_Police.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup('<strong>Police Station:</strong> ' + (feature.properties.name || 'Unknown'));
       }
-    };
+    }, "Police Stations");
 
-    // Load the police stations GeoJSON layer
-    loadGeoJSON('data/Pasco_Police.geojson', policeOptions, "Police Stations");
-
-    // Options for displaying fire stations (using default markers)
-    var fireOptions = {
+    // Load Fire Stations
+    loadGeoJSON('data/Pasco_Fire.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup('<strong>Fire Station:</strong> ' + (feature.properties.name || 'Unknown'));
       }
-    };
+    }, "Fire Stations");
 
-    // Load the fire stations GeoJSON layer
-    loadGeoJSON('data/Pasco_Fire.geojson', fireOptions, "Fire Stations");
+    // Variables to hold the school-dependent layers
+    var buffersLayer = null;
+    var isochronesLayer = null;
 
-    // Options for displaying isochrone polygons (with a style function)
-    var isochroneOptions = {
-      style: function(feature) {
-        return {
-          fillColor: 'orange',
-          color: 'red',
-          weight: 2,
-          opacity: 0.8,
-          fillOpacity: 0.3
-        };
-      },
-      onEachFeature: function(feature, layer) {
-        layer.bindPopup('<strong>Isochrone:</strong> ' + (feature.properties.travel_time/60) + " minutes");
+    // Function to load school-dependent layers (Euclidean buffers and network isochrones)
+    function loadSchoolDependentLayers(schoolName) {
+      // Remove existing buffers and isochrones layers if present
+      if (buffersLayer) {
+        map.removeLayer(buffersLayer);
+        layerControl.removeLayer(buffersLayer);
       }
-    };
+      if (isochronesLayer) {
+        map.removeLayer(isochronesLayer);
+        layerControl.removeLayer(isochronesLayer);
+      }
+      
+      // Define a filter function for features based on selected school
+      var filterFunction = function(feature) {
+        if (!schoolName || schoolName === "") return true;
+        return feature.properties.school_name === schoolName;
+      };
 
-    // Load the isochrones GeoJSON layer (from network analysis)
-    loadGeoJSON('data/isochrones.geojson', isochroneOptions, "Isochrones");
+      // Create a layer group for Euclidean buffers
+      buffersLayer = L.layerGroup();
+      // Array of buffer files with display names
+      var bufferFiles = [
+        {file: 'data/Schools_buffer_0.5_Mile.geojson', name: "Buffer 0.5 Mile"},
+        {file: 'data/Schools_Buffer_1_Mile.geojson', name: "Buffer 1 Mile"},
+        {file: 'data/Schools_Buffer_1.5_Mile.geojson', name: "Buffer 1.5 Mile"}
+      ];
+      
+      // Load each buffer file and add it to the buffersLayer group
+      bufferFiles.forEach(function(item) {
+        loadGeoJSON(item.file, {
+          filter: filterFunction,
+          style: function(feature) {
+            return {
+              fillColor: 'green',
+              color: 'darkgreen',
+              weight: 2,
+              opacity: 0.8,
+              fillOpacity: 0.4
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            layer.bindPopup('<strong>Buffer for:</strong> ' + feature.properties.school_name + '<br/><strong>Distance:</strong> ' + item.name);
+          }
+        }, item.name, function(loadedLayer, data) {
+          buffersLayer.addLayer(loadedLayer);
+        });
+      });
+      
+      // Add the buffers layer group to the map and layer control (after a short delay to allow loading)
+      setTimeout(function() {
+        map.addLayer(buffersLayer);
+        layerControl.addOverlay(buffersLayer, "Euclidean Buffers");
+      }, 2000);
+      
+      // Load Network Isochrones (assumes 'data/isochrones_all.geojson' has property 'school_name')
+      loadGeoJSON('data/isochrones_all.geojson', {
+        filter: filterFunction,
+        style: function(feature) {
+          return {
+            fillColor: 'orange',
+            color: 'red',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.5
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          layer.bindPopup('<strong>Isochrone for:</strong> ' + feature.properties.school_name +
+                          '<br/><strong>Travel Time:</strong> ' + (feature.properties.travel_time/60) + " minutes");
+        }
+      }, "Network Isochrones", function(loadedLayer, data) {
+        isochronesLayer = loadedLayer;
+        map.addLayer(isochronesLayer);
+        layerControl.addOverlay(isochronesLayer, "Network Isochrones");
+      });
+    }
 
-    // Now, all layers are set up. The layer control allows users to toggle them on/off.
+    // Initially load layers for all schools
+    loadSchoolDependentLayers("");
 
-    // Additional interactive features and dashboard integration can be added here.
+    // Update layers when a school is selected from the dropdown
+    document.getElementById('schoolSelect').addEventListener('change', function() {
+      var selectedSchool = this.value;
+      loadSchoolDependentLayers(selectedSchool);
+    });
   </script>
 </body>
 </html>
