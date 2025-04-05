@@ -8,6 +8,8 @@ title: "Pasco School Safety Proximity Analysis"
 > **Disclaimer:**  
 > **This project and the data used are strictly for demonstration and coding exercise purposes. They should not be used for any real analysis or decision-making.**
 
+[View Interactive Map](map.html)
+
 ## Project Overview
 
 This project demonstrates an end-to-end GIS workflow that examines the proximity of schools to emergency services (police and fire stations) in Pasco County. The focus is on showcasing a coding-based spatial analysis workflow and creating an interactive WebGIS application. The data used (Schools, Police Stations, and Fire Stations) were obtained for Pasco County, Florida, and are used here solely as sample data.
@@ -109,3 +111,4 @@ def generate_isochrone(G, center_node, travel_time_limit):
 
 This project demonstrates an integrated GIS workflow combining data collection, spatial analysis, network analysis using OSMnx, and interactive visualization with Leaflet. While the project is intended solely as a coding exercise, it provides a robust framework that showcases advanced GIS techniques and reproducible coding practices.
 
+</file>
