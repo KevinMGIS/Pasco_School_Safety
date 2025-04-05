@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 """
-School Safety Proximity Analysis Script
+School Safety Proximity Analysis Script (Pivot Version)
 This script processes GeoJSON data for Pasco Schools, Police Stations, Fire Stations, 
-and County Boundaries. It creates multiple buffer zones around each school, calculates 
-the distance to the nearest police and fire stations, and exports the processed data.
-This code-based workflow is ideal for showcasing reproducibility and technical proficiency.
+and County Boundaries. It creates a buffer for each school (storing the school name with the buffer),
+then performs spatial analysis to count the number of police and fire stations within each buffer.
+The resulting data is exported as a GeoJSON file for use in a WebGIS application and dashboards.
+This project is intended solely as a coding exercise.
 
 Author: Your Name
 Date: YYYY-MM-DD
@@ -15,14 +16,11 @@ import geopandas as gpd
 # -------------------------------
 # 1. SETUP AND DATA LOADING
 # -------------------------------
-
-# Define file paths for the data files in the 'Data' folder.
 schools_fp = "data/Pasco_Schools.geojson"
 police_fp = "data/Pasco_Police_Stations.geojson"
 fire_fp = "data/Pasco_Fire_Stations.geojson"
 county_fp = "data/Pasco_County_Boundary.geojson"
 
-# Load the GeoJSON files into GeoDataFrames using GeoPandas.
 schools = gpd.read_file(schools_fp)
 police = gpd.read_file(police_fp)
 fire = gpd.read_file(fire_fp)
@@ -31,11 +29,7 @@ county = gpd.read_file(county_fp)
 # -------------------------------
 # 2. CRS CHECK AND REPROJECTION
 # -------------------------------
-# Ensure all layers use the same Coordinate Reference System (CRS) for accurate spatial analysis.
-# For buffer and distance calculations, a projected CRS is preferred.
-# Here, we assume the data may be in WGS84 (EPSG:4326) and convert to EPSG:3857 (Web Mercator),
-# which uses meters as its unit.
-
+# For buffer and spatial analysis, we use a projected CRS (Web Mercator)
 target_crs = "EPSG:3857"
 
 if schools.crs != target_crs:
@@ -48,66 +42,55 @@ if county.crs != target_crs:
     county = county.to_crs(target_crs)
 
 # -------------------------------
-# 3. BUFFER CREATION
+# 3. BUFFER CREATION FOR ALL SCHOOLS
 # -------------------------------
-# Define buffer distances in miles and convert to meters.
-# Conversion: 1 mile = 1609.34 meters.
-buffer_distances = {
-    "0.5_mile": 0.5 * 1609.34,
-    "1_mile": 1 * 1609.34,
-    "1.5_mile": 1.5 * 1609.34
-}
+# Define the buffer distance for analysis (1 mile in meters)
+buffer_distance_meters = 1 * 1609.34
 
-# Create buffers for each school at different distances.
-# We create separate GeoDataFrames for each buffer scenario.
-schools_buffer_0_5 = schools.copy()
-schools_buffer_0_5["geometry"] = schools_buffer_0_5.geometry.buffer(buffer_distances["0.5_mile"])
+# Create a buffer for each school.
+schools['buffer'] = schools.geometry.buffer(buffer_distance_meters)
 
-schools_buffer_1 = schools.copy()
-schools_buffer_1["geometry"] = schools_buffer_1.geometry.buffer(buffer_distances["1_mile"])
+# Determine the correct school identifier column.
+if 'name' in schools.columns:
+    id_col = 'name'
+elif 'NAME' in schools.columns:
+    id_col = 'NAME'
+elif 'school_name' in schools.columns:
+    id_col = 'school_name'
+else:
+    raise KeyError("Neither 'name', 'NAME', nor 'school_name' found in schools columns. Available columns: " + str(schools.columns))
 
-schools_buffer_1_5 = schools.copy()
-schools_buffer_1_5["geometry"] = schools_buffer_1_5.geometry.buffer(buffer_distances["1.5_mile"])
-
-# Export the buffer layers as GeoJSON files for the WebGIS application.
-schools_buffer_0_5.to_file("Data/Schools_Buffer_0.5_Mile.geojson", driver="GeoJSON")
-schools_buffer_1.to_file("Data/Schools_Buffer_1_Mile.geojson", driver="GeoJSON")
-schools_buffer_1_5.to_file("Data/Schools_Buffer_1.5_Mile.geojson", driver="GeoJSON")
+# Create a GeoDataFrame from the buffers, retaining the school identifier.
+school_buffers = schools[[id_col, 'buffer']].copy()
+# Rename the identifier column to 'school_id' and 'buffer' to 'geometry'
+school_buffers = school_buffers.rename(columns={'buffer': 'geometry', id_col: 'school_id'})
+school_buffers = school_buffers.set_geometry('geometry')
 
 # -------------------------------
-# 4. DISTANCE ANALYSIS
+# 4. SPATIAL ANALYSIS: COUNT NEARBY STATIONS
 # -------------------------------
-# Calculate the nearest police station and fire station distances for each school.
-# We use GeoPandas' sjoin_nearest function (available in GeoPandas 0.10+), which performs a spatial join 
-# and adds a column with the computed distance.
-# The distance values are in the CRS units (meters for EPSG:3857).
+# Count police stations within each school's buffer.
+police_in_buffer = gpd.sjoin(police, school_buffers, how='inner', predicate='within')
+# Count fire stations within each school's buffer.
+fire_in_buffer = gpd.sjoin(fire, school_buffers, how='inner', predicate='within')
 
-# Calculate distance to the nearest police station.
-schools_with_police = schools.sjoin_nearest(
-    police[['geometry']],
-    how="left",
-    distance_col="dist_to_police"
-)
+# Aggregate counts by school_id.
+police_counts = police_in_buffer.groupby('school_id').size().reset_index(name='police_count')
+fire_counts = fire_in_buffer.groupby('school_id').size().reset_index(name='fire_count')
 
-# Drop 'index_right' column to avoid conflicts in subsequent joins
-schools_with_police = schools_with_police.drop(columns=['index_right'], errors='ignore')
+# Merge the counts into the school_buffers GeoDataFrame using 'school_id'.
+school_buffers = school_buffers.merge(police_counts, on='school_id', how='left')
+school_buffers = school_buffers.merge(fire_counts, on='school_id', how='left')
 
-# Calculate distance to the nearest fire station by joining the fire GeoDataFrame.
-# We perform the join on the result from the previous join to retain the police distance column.
-schools_with_fire = schools_with_police.sjoin_nearest(
-    fire[['geometry']],
-    how="left",
-    distance_col="dist_to_fire"
-)
-
-# The 'schools_with_fire' GeoDataFrame now contains two new columns:
-# 'dist_to_police' and 'dist_to_fire' representing the nearest distances (in meters).
-print("Sample of schools with computed distances:")
-print(schools_with_fire.head())
+# Replace NaN values with 0.
+school_buffers['police_count'] = school_buffers['police_count'].fillna(0).astype(int)
+school_buffers['fire_count'] = school_buffers['fire_count'].fillna(0).astype(int)
 
 # -------------------------------
 # 5. EXPORT PROCESSED DATA
 # -------------------------------
-# Export the processed schools layer, which now includes the distance calculations,
-# to a new GeoJSON file for use in the WebGIS application.
-schools_with_fire.to_file("Data/Processed_Schools.geojson", driver="GeoJSON")
+# Export the analyzed school buffers with counts as a GeoJSON file.
+output_fp = "Data/All_School_Buffers_Analyzed.geojson"
+school_buffers.to_file(output_fp, driver="GeoJSON")
+
+print("Exported analyzed school buffers with station counts to", output_fp)
