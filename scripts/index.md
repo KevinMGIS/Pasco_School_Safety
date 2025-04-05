@@ -1,3 +1,8 @@
+---
+layout: default
+title: Pasco School Safety Proximity Analysis
+---
+
 # Pasco School Safety Proximity Analysis
 
 > **Disclaimer:**  
