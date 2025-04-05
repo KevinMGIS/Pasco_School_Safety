@@ -115,7 +115,7 @@
     });
 
     // Load Police Stations (in blue)
-    loadGeoJSON('data/Pasco_Police.geojson', {
+    loadGeoJSON('data/Pasco_Police_Stations.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup('<strong>Police Station:</strong> ' + (feature.properties.name || 'Unknown'));
       },
@@ -132,7 +132,7 @@
     }, "Police Stations");
 
     // Load Fire Stations (in red)
-    loadGeoJSON('data/Pasco_Fire.geojson', {
+    loadGeoJSON('data/Pasco_Fire_Stations.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup('<strong>Fire Station:</strong> ' + (feature.properties.name || 'Unknown'));
       },
