@@ -1,0 +1,28 @@
+/* assets/css/custom.css */
+
+/* Set the overall background to a light grey */
+body {
+    background-color: #f0f0f0;
+    color: #333;
+  }
+  
+  /* Style headers with an orange accent */
+  h1, h2, h3, h4, h5, h6 {
+    color: #ff6600; /* orange */
+  }
+  
+  /* Links get an orange color */
+  a {
+    color: #ff6600;
+  }
+  
+  /* Optional: Style the header and footer backgrounds */
+  .site-header, .site-footer {
+    background-color: #dcdcdc;
+  }
+  
+  /* Override button styling, if needed */
+  a.button {
+    background-color: #ff6600;
+    color: #fff;
+  }

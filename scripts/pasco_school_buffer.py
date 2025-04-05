@@ -17,10 +17,10 @@ import geopandas as gpd
 # -------------------------------
 
 # Define file paths for the data files in the 'Data' folder.
-schools_fp = "Data/Pasco_Schools.geojson"
-police_fp = "Data/Pasco_Police.geojson"
-fire_fp = "Data/Pasco_Fire.geojson"
-county_fp = "Data/County_Boundaries.geojson"
+schools_fp = "data/Pasco_Schools.geojson"
+police_fp = "data/Pasco_Police_Stations.geojson"
+fire_fp = "data/Pasco_Fire_Stations.geojson"
+county_fp = "data/Pasco_County_Boundary.geojson"
 
 # Load the GeoJSON files into GeoDataFrames using GeoPandas.
 schools = gpd.read_file(schools_fp)
@@ -83,12 +83,14 @@ schools_buffer_1_5.to_file("Data/Schools_Buffer_1.5_Mile.geojson", driver="GeoJS
 # The distance values are in the CRS units (meters for EPSG:3857).
 
 # Calculate distance to the nearest police station.
-# We join the police GeoDataFrame to schools, keeping only the geometry column from police.
 schools_with_police = schools.sjoin_nearest(
     police[['geometry']],
     how="left",
     distance_col="dist_to_police"
 )
+
+# Drop 'index_right' column to avoid conflicts in subsequent joins
+schools_with_police = schools_with_police.drop(columns=['index_right'], errors='ignore')
 
 # Calculate distance to the nearest fire station by joining the fire GeoDataFrame.
 # We perform the join on the result from the previous join to retain the police distance column.
