@@ -19,3 +19,4 @@ Thumbs.db
 *.log
 
 # Ignore the data folder
+data/
