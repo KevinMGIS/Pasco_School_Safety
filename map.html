@@ -31,13 +31,25 @@
       background: #fff;
       border: 1px solid #ccc;
     }
+    /* Map title overlay styling */
+    #mapTitle {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.8);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <!-- Sidebar for dashboard controls -->
   <div id="sidebar">
     <h2>Dashboard</h2>
-    <!-- Optionally, you can remove the school filter if not needed -->
     <label for="schoolSelect">Select School:</label>
     <select id="schoolSelect">
       <option value="">All Schools</option>
@@ -55,7 +67,10 @@
   </div>
 
   <!-- Map container -->
-  <div id="map"></div>
+  <div id="map">
+    <!-- Map title overlay -->
+    <div id="mapTitle">Pasco School Safety Map</div>
+  </div>
 
   <!-- Include Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -63,7 +78,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     // Initialize the map centered on Pasco County (approximate coordinates)
-    var map = L.map('map').setView([28.2465, -82.6925], 11);
+    var map = L.map('map').setView([28.285, -82.553], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
@@ -151,19 +166,47 @@
       }
     }, "Fire Stations");
 
-    // Since we're removing the buffers from the map, we no longer call loadSchoolDependentLayers()
-    // If you still want the dropdown for filtering to affect the view, you can repurpose it
-    // For now, we'll just log the selected school.
+    // Load Euclidean Buffers (back on the map)
+    var buffersLayer = L.layerGroup();
+    var bufferFiles = [
+      {file: 'data/Schools_buffer_0.5_Mile.geojson', name: "Buffer 0.5 Mile"},
+      {file: 'data/Schools_Buffer_1_Mile.geojson', name: "Buffer 1 Mile"},
+      {file: 'data/Schools_Buffer_1.5_Mile.geojson', name: "Buffer 1.5 Mile"}
+    ];
+    bufferFiles.forEach(function(item) {
+      loadGeoJSON(item.file, {
+        style: function(feature) {
+          return {
+            fillColor: 'green',
+            color: 'darkgreen',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.4
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          layer.bindPopup('<strong>Buffer for:</strong> ' + feature.properties.school_name + '<br/><strong>Distance:</strong> ' + item.name);
+        }
+      }, item.name, function(loadedLayer, data) {
+        buffersLayer.addLayer(loadedLayer);
+      });
+    });
+    // Add the buffers layer group to the map and layer control after a short delay
+    setTimeout(function() {
+      map.addLayer(buffersLayer);
+      layerControl.addOverlay(buffersLayer, "Euclidean Buffers");
+    }, 2000);
+
+    // Update school selection event (if needed)
     document.getElementById('schoolSelect').addEventListener('change', function() {
       var selectedSchool = this.value;
       console.log("Selected school: " + selectedSchool);
-      // In a future enhancement, you might filter fire/police station layers based on selection.
+      // Future enhancement: Filter layers based on selected school.
     });
 
     // -------------------------------
     // Dashboard Charts with Chart.js
     // -------------------------------
-
     // Dummy data for Coverage Count Chart
     var coverageData = [70, 65]; // [Police, Fire]
     var ctx1 = document.getElementById('coverageChart').getContext('2d');
