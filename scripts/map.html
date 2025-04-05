@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Pasco School Safety Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Link to Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Optional: Link to any custom CSS styles -->
+  <style>
+    /* Ensure the map fills the full viewport height */
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+  <!-- The map container -->
+  <div id="map"></div>
+
+  <!-- Include Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Initialize the map, centering it on Pasco County (approximate coordinates)
+    var map = L.map('map').setView([28.2465, -82.6925], 11);
+
+    // Add an OpenStreetMap basemap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Create an object to hold overlay layers for later use in a layer control
+    var overlayMaps = {};
+
+    // -------------------------------
+    // Load GeoJSON Layers
+    // -------------------------------
+
+    // Function to load a GeoJSON layer and add pop-ups
+    function loadGeoJSON(url, options, layerName) {
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          // Create a Leaflet GeoJSON layer
+          var geojsonLayer = L.geoJSON(data, options);
+          // Optionally add the layer to the map immediately
+          // geojsonLayer.addTo(map);
+          // Store the layer in overlayMaps for toggling later
+          overlayMaps[layerName] = geojsonLayer;
+          // Update the layer control if already added (or add it if not)
+          if (layerControl) {
+            layerControl.addOverlay(geojsonLayer, layerName);
+          }
+        })
+        .catch(err => console.error('Error loading ' + layerName + ' GeoJSON:', err));
+    }
+
+    // Create a layer control (empty for now) and add it to the map
+    var layerControl = L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
+
+    // Options for displaying schools (as circle markers with pop-ups)
+    var schoolsOptions = {
+      onEachFeature: function(feature, layer) {
+        // Customize pop-up content with school information
+        layer.bindPopup('<strong>School:</strong> ' + feature.properties.name);
+      },
+      pointToLayer: function(feature, latlng) {
+        return L.circleMarker(latlng, {
+          radius: 6,
+          fillColor: "blue",
+          color: "darkblue",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+      }
+    };
+
+    // Load the schools GeoJSON layer
+    loadGeoJSON('data/Pasco_Schools.geojson', schoolsOptions, "Schools");
+
+    // Options for displaying police stations (using default markers)
+    var policeOptions = {
+      onEachFeature: function(feature, layer) {
+        layer.bindPopup('<strong>Police Station:</strong> ' + (feature.properties.name || 'Unknown'));
+      }
+    };
+
+    // Load the police stations GeoJSON layer
+    loadGeoJSON('data/Pasco_Police.geojson', policeOptions, "Police Stations");
+
+    // Options for displaying fire stations (using default markers)
+    var fireOptions = {
+      onEachFeature: function(feature, layer) {
+        layer.bindPopup('<strong>Fire Station:</strong> ' + (feature.properties.name || 'Unknown'));
+      }
+    };
+
+    // Load the fire stations GeoJSON layer
+    loadGeoJSON('data/Pasco_Fire.geojson', fireOptions, "Fire Stations");
+
+    // Options for displaying isochrone polygons (with a style function)
+    var isochroneOptions = {
+      style: function(feature) {
+        return {
+          fillColor: 'orange',
+          color: 'red',
+          weight: 2,
+          opacity: 0.8,
+          fillOpacity: 0.3
+        };
+      },
+      onEachFeature: function(feature, layer) {
+        layer.bindPopup('<strong>Isochrone:</strong> ' + (feature.properties.travel_time/60) + " minutes");
+      }
+    };
+
+    // Load the isochrones GeoJSON layer (from network analysis)
+    loadGeoJSON('data/isochrones.geojson', isochroneOptions, "Isochrones");
+
+    // Now, all layers are set up. The layer control allows users to toggle them on/off.
+
+    // Additional interactive features and dashboard integration can be added here.
+  </script>
+</body>
+</html>
