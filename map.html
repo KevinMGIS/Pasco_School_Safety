@@ -22,6 +22,15 @@
     }
     /* Map takes the remaining space */
     #map { position: absolute; top: 0; left: 300px; right: 0; bottom: 0; }
+    /* Dashboard canvas styling */
+    #dashboardCharts {
+      margin-top: 20px;
+    }
+    #dashboardCharts canvas {
+      margin-bottom: 20px;
+      background: #fff;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -33,7 +42,15 @@
       <option value="">All Schools</option>
       <!-- Options will be populated dynamically from the Schools layer -->
     </select>
-    <!-- Additional dashboard elements can go here -->
+    
+    <div id="dashboardCharts">
+      <h3>Coverage Count</h3>
+      <canvas id="coverageChart" width="250" height="150"></canvas>
+      <h3>Average Distance / Travel Time</h3>
+      <canvas id="avgDistanceChart" width="250" height="150"></canvas>
+      <h3>Coverage Breakdown</h3>
+      <canvas id="coverageBreakdownChart" width="250" height="150"></canvas>
+    </div>
   </div>
 
   <!-- Map container -->
@@ -41,6 +58,8 @@
 
   <!-- Include Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Include Chart.js for dashboards -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     // Initialize the map centered on Pasco County (approximate coordinates)
     var map = L.map('map').setView([28.2465, -82.6925], 11);
@@ -75,8 +94,8 @@
       pointToLayer: function(feature, latlng) {
         return L.circleMarker(latlng, {
           radius: 6,
-          fillColor: "blue",
-          color: "darkblue",
+          fillColor: "orange",
+          color: "darkorange",
           weight: 1,
           opacity: 1,
           fillOpacity: 0.8
@@ -94,17 +113,37 @@
       });
     });
 
-    // Load Police Stations
+    // Load Police Stations (in blue)
     loadGeoJSON('data/Pasco_Police.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup('<strong>Police Station:</strong> ' + (feature.properties.name || 'Unknown'));
+      },
+      pointToLayer: function(feature, latlng) {
+        return L.circleMarker(latlng, {
+          radius: 6,
+          fillColor: "blue",
+          color: "darkblue",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
       }
     }, "Police Stations");
 
-    // Load Fire Stations
+    // Load Fire Stations (in red)
     loadGeoJSON('data/Pasco_Fire.geojson', {
       onEachFeature: function(feature, layer) {
         layer.bindPopup('<strong>Fire Station:</strong> ' + (feature.properties.name || 'Unknown'));
+      },
+      pointToLayer: function(feature, latlng) {
+        return L.circleMarker(latlng, {
+          radius: 6,
+          fillColor: "red",
+          color: "darkred",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
       }
     }, "Fire Stations");
 
@@ -197,6 +236,88 @@
     document.getElementById('schoolSelect').addEventListener('change', function() {
       var selectedSchool = this.value;
       loadSchoolDependentLayers(selectedSchool);
+    });
+
+    // -------------------------------
+    // Dashboard Charts with Chart.js
+    // -------------------------------
+
+    // Dummy data for Coverage Count Chart
+    // Format: [Euclidean - Police, Euclidean - Fire, Isochrone - Police, Isochrone - Fire]
+    var coverageData = [70, 65, 75, 68]; // Replace with real data when available
+
+    var ctx1 = document.getElementById('coverageChart').getContext('2d');
+    var coverageChart = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: ['Euclidean - Police', 'Euclidean - Fire', 'Isochrone - Police', 'Isochrone - Fire'],
+        datasets: [{
+          label: 'Number of Schools Covered',
+          data: coverageData,
+          backgroundColor: [
+            'rgba(0, 128, 0, 0.6)',
+            'rgba(0, 128, 0, 0.6)',
+            'rgba(255, 165, 0, 0.6)',
+            'rgba(255, 165, 0, 0.6)'
+          ]
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Dummy data for Average Distance / Travel Time Chart (in meters or seconds)
+    // Format: [Euclidean - Police, Euclidean - Fire, Isochrone - Police, Isochrone - Fire]
+    var avgDistanceData = [800, 950, 1200, 1300]; // Replace with real data when available
+
+    var ctx2 = document.getElementById('avgDistanceChart').getContext('2d');
+    var avgDistanceChart = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: ['Euclidean - Police', 'Euclidean - Fire', 'Isochrone - Police', 'Isochrone - Fire'],
+        datasets: [{
+          label: 'Average Distance (m) / Travel Time (s)',
+          data: avgDistanceData,
+          backgroundColor: [
+            'rgba(0, 0, 255, 0.6)',
+            'rgba(0, 0, 255, 0.6)',
+            'rgba(255, 0, 0, 0.6)',
+            'rgba(255, 0, 0, 0.6)'
+          ]
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Dummy data for Coverage Breakdown (percentage of schools)
+    // Labels: Both, Only Police, Only Fire, None
+    var coverageBreakdownData = [65, 15, 10, 10]; // Replace with real data when available
+
+    var ctx3 = document.getElementById('coverageBreakdownChart').getContext('2d');
+    var coverageBreakdownChart = new Chart(ctx3, {
+      type: 'pie',
+      data: {
+        labels: ['Both', 'Only Police', 'Only Fire', 'None'],
+        datasets: [{
+          data: coverageBreakdownData,
+          backgroundColor: [
+            'rgba(0, 128, 0, 0.6)',
+            'rgba(0, 0, 255, 0.6)',
+            'rgba(255, 0, 0, 0.6)',
+            'rgba(128, 128, 128, 0.6)'
+          ]
+        }]
+      },
+      options: {
+        responsive: true
+      }
     });
   </script>
 </body>
