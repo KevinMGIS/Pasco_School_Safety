@@ -8,20 +8,20 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    /* Sidebar styling */
+    /* Increase sidebar width to 400px for better dashboard visibility */
     #sidebar {
       position: absolute;
       top: 0;
       left: 0;
-      width: 300px;
+      width: 400px;
       bottom: 0;
       background: #f7f7f7;
       padding: 10px;
       overflow-y: auto;
       box-shadow: 2px 0 5px rgba(0,0,0,0.3);
     }
-    /* Map takes the remaining space */
-    #map { position: absolute; top: 0; left: 300px; right: 0; bottom: 0; }
+    /* Map now takes the remaining space */
+    #map { position: absolute; top: 0; left: 400px; right: 0; bottom: 0; }
     /* Dashboard canvas styling */
     #dashboardCharts {
       margin-top: 20px;
@@ -37,6 +37,7 @@
   <!-- Sidebar for dashboard controls -->
   <div id="sidebar">
     <h2>Dashboard</h2>
+    <!-- Optionally, you can remove the school filter if not needed -->
     <label for="schoolSelect">Select School:</label>
     <select id="schoolSelect">
       <option value="">All Schools</option>
@@ -45,11 +46,11 @@
     
     <div id="dashboardCharts">
       <h3>Coverage Count</h3>
-      <canvas id="coverageChart" width="250" height="150"></canvas>
+      <canvas id="coverageChart" width="300" height="200"></canvas>
       <h3>Average Distance / Travel Time</h3>
-      <canvas id="avgDistanceChart" width="250" height="150"></canvas>
+      <canvas id="avgDistanceChart" width="300" height="200"></canvas>
       <h3>Coverage Breakdown</h3>
-      <canvas id="coverageBreakdownChart" width="250" height="150"></canvas>
+      <canvas id="coverageBreakdownChart" width="300" height="200"></canvas>
     </div>
   </div>
 
@@ -147,95 +148,13 @@
       }
     }, "Fire Stations");
 
-    // Variables to hold the school-dependent layers
-    var buffersLayer = null;
-    var isochronesLayer = null;
-
-    // Function to load school-dependent layers (Euclidean buffers and network isochrones)
-    function loadSchoolDependentLayers(schoolName) {
-      // Remove existing buffers and isochrones layers if present
-      if (buffersLayer) {
-        map.removeLayer(buffersLayer);
-        layerControl.removeLayer(buffersLayer);
-      }
-      if (isochronesLayer) {
-        map.removeLayer(isochronesLayer);
-        layerControl.removeLayer(isochronesLayer);
-      }
-      
-      // Define a filter function for features based on selected school.
-      // Assumes each feature in the buffers and isochrones files has a property "school_name".
-      var filterFunction = function(feature) {
-        if (!schoolName || schoolName === "") return true;
-        return feature.properties.school_name === schoolName;
-      };
-
-      // Create a layer group for Euclidean buffers
-      buffersLayer = L.layerGroup();
-      // Array of buffer files with display names
-      var bufferFiles = [
-        {file: 'data/Schools_buffer_0.5_Mile.geojson', name: "Buffer 0.5 Mile"},
-        {file: 'data/Schools_Buffer_1_Mile.geojson', name: "Buffer 1 Mile"},
-        {file: 'data/Schools_Buffer_1.5_Mile.geojson', name: "Buffer 1.5 Mile"}
-      ];
-      
-      // Load each buffer file and add it to the buffersLayer group
-      bufferFiles.forEach(function(item) {
-        loadGeoJSON(item.file, {
-          filter: filterFunction,
-          style: function(feature) {
-            return {
-              fillColor: 'green',
-              color: 'darkgreen',
-              weight: 2,
-              opacity: 0.8,
-              fillOpacity: 0.4
-            };
-          },
-          onEachFeature: function(feature, layer) {
-            layer.bindPopup('<strong>Buffer for:</strong> ' + feature.properties.school_name + '<br/><strong>Distance:</strong> ' + item.name);
-          }
-        }, item.name, function(loadedLayer, data) {
-          buffersLayer.addLayer(loadedLayer);
-        });
-      });
-      
-      // Add the buffers layer group to the map and layer control (after a short delay to allow loading)
-      setTimeout(function() {
-        map.addLayer(buffersLayer);
-        layerControl.addOverlay(buffersLayer, "Euclidean Buffers");
-      }, 2000);
-      
-      // Load Network Isochrones (assumes 'data/isochrones_all.geojson' has property 'school_name')
-      loadGeoJSON('data/isochrones_all.geojson', {
-        filter: filterFunction,
-        style: function(feature) {
-          return {
-            fillColor: 'orange',
-            color: 'red',
-            weight: 2,
-            opacity: 0.8,
-            fillOpacity: 0.5
-          };
-        },
-        onEachFeature: function(feature, layer) {
-          layer.bindPopup('<strong>Isochrone for:</strong> ' + feature.properties.school_name +
-                          '<br/><strong>Travel Time:</strong> ' + (feature.properties.travel_time/60) + " minutes");
-        }
-      }, "Network Isochrones", function(loadedLayer, data) {
-        isochronesLayer = loadedLayer;
-        map.addLayer(isochronesLayer);
-        layerControl.addOverlay(isochronesLayer, "Network Isochrones");
-      });
-    }
-
-    // Initially load layers for all schools
-    loadSchoolDependentLayers("");
-
-    // Update layers when a school is selected from the dropdown
+    // Since we're removing the buffers from the map, we no longer call loadSchoolDependentLayers()
+    // If you still want the dropdown for filtering to affect the view, you can repurpose it
+    // For now, we'll just log the selected school.
     document.getElementById('schoolSelect').addEventListener('change', function() {
       var selectedSchool = this.value;
-      loadSchoolDependentLayers(selectedSchool);
+      console.log("Selected school: " + selectedSchool);
+      // In a future enhancement, you might filter fire/police station layers based on selection.
     });
 
     // -------------------------------
@@ -243,22 +162,18 @@
     // -------------------------------
 
     // Dummy data for Coverage Count Chart
-    // Format: [Euclidean - Police, Euclidean - Fire, Isochrone - Police, Isochrone - Fire]
-    var coverageData = [70, 65, 75, 68]; // Replace with real data when available
-
+    var coverageData = [70, 65]; // [Police, Fire]
     var ctx1 = document.getElementById('coverageChart').getContext('2d');
     var coverageChart = new Chart(ctx1, {
       type: 'bar',
       data: {
-        labels: ['Euclidean - Police', 'Euclidean - Fire', 'Isochrone - Police', 'Isochrone - Fire'],
+        labels: ['Police Stations Covered', 'Fire Stations Covered'],
         datasets: [{
           label: 'Number of Schools Covered',
           data: coverageData,
           backgroundColor: [
             'rgba(0, 128, 0, 0.6)',
-            'rgba(0, 128, 0, 0.6)',
-            'rgba(255, 165, 0, 0.6)',
-            'rgba(255, 165, 0, 0.6)'
+            'rgba(255, 0, 0, 0.6)'
           ]
         }]
       },
@@ -270,21 +185,17 @@
     });
 
     // Dummy data for Average Distance / Travel Time Chart (in meters or seconds)
-    // Format: [Euclidean - Police, Euclidean - Fire, Isochrone - Police, Isochrone - Fire]
-    var avgDistanceData = [800, 950, 1200, 1300]; // Replace with real data when available
-
+    var avgDistanceData = [800, 950]; // [Police, Fire]
     var ctx2 = document.getElementById('avgDistanceChart').getContext('2d');
     var avgDistanceChart = new Chart(ctx2, {
       type: 'bar',
       data: {
-        labels: ['Euclidean - Police', 'Euclidean - Fire', 'Isochrone - Police', 'Isochrone - Fire'],
+        labels: ['Average Police Distance/Time', 'Average Fire Distance/Time'],
         datasets: [{
           label: 'Average Distance (m) / Travel Time (s)',
           data: avgDistanceData,
           backgroundColor: [
             'rgba(0, 0, 255, 0.6)',
-            'rgba(0, 0, 255, 0.6)',
-            'rgba(255, 0, 0, 0.6)',
             'rgba(255, 0, 0, 0.6)'
           ]
         }]
@@ -297,21 +208,17 @@
     });
 
     // Dummy data for Coverage Breakdown (percentage of schools)
-    // Labels: Both, Only Police, Only Fire, None
-    var coverageBreakdownData = [65, 15, 10, 10]; // Replace with real data when available
-
+    var coverageBreakdownData = [65, 35]; // Example: 65% have police coverage, 35% have fire coverage
     var ctx3 = document.getElementById('coverageBreakdownChart').getContext('2d');
     var coverageBreakdownChart = new Chart(ctx3, {
       type: 'pie',
       data: {
-        labels: ['Both', 'Only Police', 'Only Fire', 'None'],
+        labels: ['Police Coverage', 'Fire Coverage'],
         datasets: [{
           data: coverageBreakdownData,
           backgroundColor: [
             'rgba(0, 128, 0, 0.6)',
-            'rgba(0, 0, 255, 0.6)',
-            'rgba(255, 0, 0, 0.6)',
-            'rgba(128, 128, 128, 0.6)'
+            'rgba(255, 0, 0, 0.6)'
           ]
         }]
       },
