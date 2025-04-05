@@ -111,7 +111,7 @@ def generate_isochrone(G, center_node, travel_time_limit):
   - **Average Distance / Travel Time Dashboard:** Compares average distances and travel times from schools to the nearest emergency services.
   - **Coverage Breakdown Dashboard:** Shows a breakdown (via pie chart) of the percentage of schools with different levels of service coverage.
   
-These dashboards provide quantitative insights and interactive filtering capabilities.
+These dashboards provide quantitative insights.
 
 **Example Code Snippet: Basic Leaflet Map Initialization**
 
