@@ -87,7 +87,8 @@
       var select = document.getElementById('schoolSelect');
       data.features.forEach(function(feature) {
         var opt = document.createElement('option');
-        opt.value = feature.properties.name; // Assumes 'name' is the school identifier
+        // Assumes 'name' is the school identifier in the schools file.
+        opt.value = feature.properties.name;
         opt.innerHTML = feature.properties.name;
         select.appendChild(opt);
       });
@@ -123,7 +124,8 @@
         layerControl.removeLayer(isochronesLayer);
       }
       
-      // Define a filter function for features based on selected school
+      // Define a filter function for features based on selected school.
+      // Assumes each feature in the buffers and isochrones files has a property "school_name".
       var filterFunction = function(feature) {
         if (!schoolName || schoolName === "") return true;
         return feature.properties.school_name === schoolName;
