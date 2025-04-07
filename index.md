@@ -12,12 +12,12 @@ title: "Pasco School Safety Proximity Analysis"
 
 ## Project Overview
 
-This project demonstrates an end-to-end GIS workflow that examines the proximity of schools to emergency services (police and fire stations) in Pasco County. Originally, the focus was on generating simple Euclidean buffers and network isochrones for selected schools. However, we have pivoted to a more comprehensive approach:
+This project demonstrates an end-to-end GIS workflow that examines the proximity of schools to emergency services (police and fire stations) in Pasco County. Originally, the focus shifted to a more comprehensive approach:
 
 - **Buffer & Spatial Analysis Pivot:**  
-  We now generate buffers for every school in Pasco County, storing each school's identifier with its buffer. These buffers are then used to perform spatial analysis to count the number of police and fire stations that fall within each buffer, providing an indicator of service coverage for each school.
+  Buffers are now generated for every school in Pasco County, storing each school's identifier with its buffer. These buffers are then used to perform spatial analysis to count the number of police and fire stations that fall within each buffer, providing an indicator of service coverage for each school.
 - **Network Analysis:**  
-  Alongside the Euclidean buffers, we compute network isochrones using the road network from OpenStreetMap (via OSMnx) to assess realistic travel times to emergency services.
+  Network isochrones are also computed using the road network from OpenStreetMap (via OSMnx) to assess realistic travel times to emergency services.
 - **Interactive Mapping & Dashboards:**  
   The processed data is integrated into a WebGIS application (using Leaflet) that displays schools, police, and fire stations. Additionally, dashboards summarize key metrics such as:
   - The number of schools covered by police and fire services within the Euclidean and network isochrone buffers.
@@ -43,9 +43,9 @@ This project demonstrates an end-to-end GIS workflow that examines the proximity
 - **CRS Alignment & Data Loading:**  
   All GeoJSON files are loaded and reprojected to a common metric CRS (EPSG:3857) for accurate spatial analysis.
 - **Buffer Generation for All Schools:**  
-  Instead of creating buffers for a single school, we loop over all schools in Pasco County, creating a 1-mile buffer for each school. Each buffer is tagged with the school’s identifier.
+  Instead of creating buffers for a single school, the workflow loops over all schools in Pasco County, creating a 1-mile buffer for each school. Each buffer is tagged with the school’s identifier.
 - **Spatial Join Analysis:**  
-  Using these buffers, we perform spatial joins with the police and fire station layers to count how many stations fall within each school’s buffer. These counts provide a quantitative measure of emergency service coverage.
+  Using these buffers, spatial joins are performed with the police and fire station layers to count how many stations fall within each school’s buffer. These counts provide a quantitative measure of emergency service coverage.
 
 **Example Code Snippet: Generating Buffers and Counting Stations**
 
@@ -111,7 +111,7 @@ def generate_isochrone(G, center_node, travel_time_limit):
   - **Average Distance / Travel Time Dashboard:** Compares average distances and travel times from schools to the nearest emergency services.
   - **Coverage Breakdown Dashboard:** Shows a breakdown (via pie chart) of the percentage of schools with different levels of service coverage.
   
-These dashboards provide quantitative insights.
+These dashboards deliver quantitative insights.
 
 **Example Code Snippet: Basic Leaflet Map Initialization**
 
@@ -129,5 +129,4 @@ These dashboards provide quantitative insights.
 
 ## Conclusion
 
-This pivot refines our approach by generating buffers for every school and incorporating spatial joins to count nearby emergency services, alongside generating network isochrones for a realistic measure of accessibility. The result is a robust, integrated GIS workflow that demonstrates advanced spatial analysis techniques and provides interactive, dashboard-driven insights into school safety proximity in Pasco County.
-
+This pivot refines the approach by generating buffers for every school and incorporating spatial joins to count nearby emergency services, alongside generating network isochrones for a realistic measure of accessibility. The result is a robust, integrated GIS workflow that demonstrates advanced spatial analysis techniques and delivers interactive, dashboard-driven insights into school safety proximity in Pasco County.
