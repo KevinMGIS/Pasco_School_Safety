@@ -10,7 +10,7 @@
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
     /* Increase sidebar width to 400px for better dashboard visibility */
     #sidebar {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 400px;
@@ -19,9 +19,15 @@
       padding: 10px;
       overflow-y: auto;
       box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+      z-index: 1001;
     }
     /* Map now takes the remaining space */
-    #map { position: absolute; top: 0; left: 400px; right: 0; bottom: 0; }
+    #map { 
+      position: relative; 
+      margin-left: 400px;
+      height: 100vh; 
+      z-index: 0; 
+    }
     /* Dashboard canvas styling */
     #dashboardCharts {
       margin-top: 20px;
@@ -31,6 +37,15 @@
       background: #fff;
       border: 1px solid #ccc;
     }
+    #projectWriteUp {
+      position: relative;
+      z-index: 1;
+      margin-left: 400px;
+      padding: 40px;
+      background: #fafafa;
+      border-top: 1px solid #ccc;
+    }
+
     /* Map title overlay styling */
     #mapTitle {
       position: absolute;
@@ -69,7 +84,52 @@
   <!-- Map container -->
   <div id="map">
     <!-- Map title overlay -->
-    <div id="mapTitle">Pasco School Safety Map</div>
+    <div id="mapTitle">Pasco School Safety Map
+      <div style="text-align: center; font-size: 14px; margin-top: 8px;">
+        <a href="#writeup" style="color: #0077cc;">Jump to Project Write-up ↓</a>
+      </div>
+    </div>
+  </div> <!-- end of #map -->
+
+  <div id="projectWriteUp">
+    <h2 id="writeup">Project Write-up</h2>
+    <p><strong>Overview:</strong> This project demonstrates a GIS-driven analysis of school safety coverage in Pasco County, Florida. The objective was to determine how well schools are served by nearby police and fire stations using both Euclidean buffer analysis and network-based isochrone generation.</p>
+
+    <h3>Tools & Technologies</h3>
+    <ul>
+      <li>Python (GeoPandas, OSMnx, NetworkX)</li>
+      <li>QGIS (for initial inspection and validation)</li>
+      <li>Leaflet.js (for interactive web mapping)</li>
+      <li>Chart.js (for dashboard visualizations)</li>
+    </ul>
+
+    <h3>GeoSpatial Methods Used</h3>
+    <ul>
+      <li><strong>Buffer Analysis:</strong> Generated 1-mile buffers around each school to measure proximity to emergency services.</li>
+      <li><strong>Spatial Joins:</strong> Counted police and fire stations within each buffer using GeoPandas.</li>
+      <li><strong>Network Isochrones:</strong> Created realistic 5-minute service areas using OpenStreetMap road network and travel times.</li>
+    </ul>
+
+    <h3>Code Examples</h3>
+    <pre><code class="language-python">
+# Buffer each school by 1 mile (1609.34 meters)
+schools['buffer'] = schools.to_crs(epsg=3857).geometry.buffer(1609.34)
+
+# Count police stations within each buffer
+police_in_buffer = gpd.sjoin(police, schools[['NAME', 'buffer']].set_geometry('buffer'), how='inner', predicate='within')
+police_counts = police_in_buffer.groupby('NAME').size().reset_index(name='police_count')
+    </code></pre>
+
+    <pre><code class="language-javascript">
+// Initialize Leaflet map
+var map = L.map('map').setView([28.285, -82.553], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+    </code></pre>
+
+    <p><strong>Outcome:</strong> The final WebGIS app allows users to view school locations, explore proximity coverage from emergency services, and visualize summary metrics through interactive dashboards and dynamic map layers.</p>
   </div>
 
   <!-- Include Leaflet JavaScript -->
